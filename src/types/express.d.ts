@@ -1,23 +1,19 @@
-import "express-serve-static-core";
+import 'express-serve-static-core'
 
-declare module 'express-serve-static-core'{
-    interface Request{
-        user:{
-            id:string,
-            role:'teacher' | 'student'
-        }
+declare module 'express-serve-static-core' {
+  interface Request {
+    user: {
+      id: string
+      role: 'teacher' | 'student'
     }
+  }
 }
 
-
-declare module 'express'{
-
-    interface Request{
-        user:{
-            id:string,
-            role:'teacher' | 'student'
-        }
+declare module 'express' {
+  interface Request {
+    user: {
+      id: string
+      role: 'teacher' | 'student'
     }
+  }
 }
-
-

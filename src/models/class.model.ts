@@ -1,35 +1,31 @@
+import mongoose, { model, Schema, Types } from 'mongoose'
 
-import mongoose,{model, Schema,Types} from "mongoose"
+type ObjectId = Types.ObjectId
 
-
-type ObjectId = Types.ObjectId;
-
-
-interface IClass{
-    className:string,
-    teacherId: ObjectId,
-    studentsIds:ObjectId[]
+interface IClass {
+  className: string
+  teacherId: ObjectId
+  studentsIds: ObjectId[]
 }
 
-
-
-const ClassSchema = new Schema<IClass>({
-
-    className:{
-        type:String,
-        required:true,
-        trim:true
+const ClassSchema = new Schema<IClass>(
+  {
+    className: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    teacherId:{
-        type:Schema.Types.ObjectId,
-        ref:'User',
-        required:true
+    teacherId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
-    studentsIds:{
-        type:[Schema.Types.ObjectId],
-        default:[]
-    }
-},{timestamps:true})
+    studentsIds: {
+      type: [Schema.Types.ObjectId],
+      default: [],
+    },
+  },
+  { timestamps: true },
+)
 
-
-export const ClassModel = model<IClass>('ClassModel',ClassSchema);
+export const ClassModel = model<IClass>('ClassModel', ClassSchema)

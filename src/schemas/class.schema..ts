@@ -1,7 +1,5 @@
-import * as z from "zod";
-
+import * as z from 'zod'
 
 export const classSchema = z.object({
-    className:z.string().min(3)
+  className: z.string().min(3),
 })
-
