@@ -13,7 +13,7 @@ export const authenticate = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization
-    const token = authHeader.split(' ')[1]
+    const token = authHeader?.split(' ')[1]
 
     console.log(token)
     if (!token) {

@@ -1,4 +1,4 @@
-import { Request, Response } from 'express-serve-static-core'
+import { Request, Response } from 'express'
 import { classSchema } from '../schemas/class.schema.'
 import { User } from '../models/user.model'
 import { ClassModel } from '../models/class.model'
