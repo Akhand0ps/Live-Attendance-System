@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express-serve-static-core'
+import { Request, Response, NextFunction } from 'express'
 import { success } from 'zod'
 import fa from 'zod/v4/locales/fa.js'
 

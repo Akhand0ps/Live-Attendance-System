@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
     "format": "prettier --write .",
     "dev": "nodemon --watch src --ext ts --exec tsx src/index.ts"
   },
@@ -25,7 +26,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",
-    "express-serve-static-core": "^0.1.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.2",
     "zod": "^4.3.5"
