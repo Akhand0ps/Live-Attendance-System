@@ -1,10 +1,13 @@
 import express from 'express'
 import { authenticate } from '../middleware/auth.middleware.js'
 import { verifyRole } from '../middleware/auth.role.js'
-import { classPost } from '../controller/class.controller.js'
+import { addStudent, createClass, getclassdetails } from '../controller/class.controller.js'
 
 const router = express.Router()
 
-router.post('/class', authenticate, verifyRole, classPost)
+router.post('/create-class', authenticate, verifyRole, createClass)
+router.post('/:id/add-student',authenticate,verifyRole,addStudent);
+router.get('/:id',authenticate,getclassdetails);
+
 
 export default router

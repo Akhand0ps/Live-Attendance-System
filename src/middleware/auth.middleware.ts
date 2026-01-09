@@ -15,7 +15,7 @@ export const authenticate = async (
     const authHeader = req.headers.authorization
     const token = authHeader?.split(' ')[1]
 
-    console.log(token)
+    // console.log(token)
     if (!token) {
       res.status(404).json({ success: false, error: 'please send jwt token' })
       return

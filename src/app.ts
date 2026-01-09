@@ -8,6 +8,6 @@ import ClassR from './routes/class.route.js'
 app.use(express.json())
 
 app.use('/api/v1/auth', UserR)
-app.use('/api/v1/', ClassR)
+app.use('/api/v1/class', ClassR)
 
 export default app

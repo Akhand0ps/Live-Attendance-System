@@ -14,6 +14,7 @@ const ClassSchema = new Schema<IClass>(
       type: String,
       required: true,
       trim: true,
+      unique:true
     },
     teacherId: {
       type: Schema.Types.ObjectId,
