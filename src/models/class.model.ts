@@ -23,6 +23,7 @@ const ClassSchema = new Schema<IClass>(
     },
     studentsIds: {
       type: [Schema.Types.ObjectId],
+      ref:'User',
       default: [],
     },
   },

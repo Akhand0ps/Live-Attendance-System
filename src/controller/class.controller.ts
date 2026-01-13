@@ -113,7 +113,7 @@ export const getclassdetails = async(req:Request,res:Response):Promise<void>=>{
 
   const classId = req.params.id;
   try{
-
+    //teacher who own the class OR student enrolled in class
     const ExistingClass = await ClassModel.findById(classId);
 
     if(!ExistingClass){
@@ -128,16 +128,17 @@ export const getclassdetails = async(req:Request,res:Response):Promise<void>=>{
     const userId = req.user.id;
     // console.log("userId: ",userId);
 
-    const checkUser = await ClassModel.find({teacherId:userId});
+    const checkUser = await ClassModel.findOne({teacherId:userId}).populate("studentsIds");
 
-    console.log(checkUser);
+    // console.log(checkUser);
     if(checkUser){
       console.log("teacher: ",checkUser);
-      // const data = await checkUser.studentsIds.populate;
-      // console.log(data);
-      
-       res.status(200).json({success:true,checkUser});
+      res.status(200).json({success:true,checkUser});
       return;
+    }
+    else{
+
+      
     }
     res.status(200).json({success:true});
     return;
