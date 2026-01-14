@@ -26,12 +26,10 @@ export const authenticate = async (
       process.env.JWT_SECRET!,
     ) as customPayload
     if (!verifytoken) {
-      res
-        .status(401)
-        .json({
-          success: false,
-          error: 'Unauthorized, token missing or invalid',
-        })
+      res.status(401).json({
+        success: false,
+        error: 'Unauthorized, token missing or invalid',
+      })
     }
 
     req.user = {

@@ -39,11 +39,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         console.log('successfully saved')
       })
       .catch((err) => {
-        throw new Error('Erro came in saving user info',err)
+        throw new Error('Erro came in saving user info', err)
       })
 
     // console.log(data)
-    res.status(201).json({ success: true,message:'Account created Successfully'})
+    res
+      .status(201)
+      .json({ success: true, message: 'Account created Successfully' })
     return
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: 'Internal Server Error' })

@@ -3,27 +3,35 @@ import { addStudentSchema, classSchema } from '../schemas/class.schema.'
 import { User } from '../models/user.model'
 import { ClassModel } from '../models/class.model'
 import { Types } from 'mongoose'
+import { Attendance } from '../models/attendance.model'
+import { success, tuple } from 'zod'
+import ca from 'zod/v4/locales/ca.js'
 
-export const createClass = async (req: Request, res: Response): Promise<void> => {
+export const createClass = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   const result = classSchema.safeParse(req.body)
   if (!result.success) {
-    res.status(400).json({ success: false, error: 'Invalid request schema',result })
+    res
+      .status(400)
+      .json({ success: false, error: 'Invalid request schema', result })
     return
   }
   try {
     const teacherId = req.user.id
-    const className = result.data.className;
+    const className = result.data.className
     const teacher = await User.findById(teacherId)
     if (!teacher) {
       res.status(500).json({ success: false, error: 'Teacher not found' })
       return
     }
 
-    const checkClass = await ClassModel.find({className});
-    if(checkClass){
+    const checkClass = await ClassModel.find({ className })
+    if (checkClass) {
       res.status(409).json({
-        success:false,
-        error:'class already exist'
+        success: false,
+        error: 'class already exist',
       })
     }
 
@@ -49,135 +57,162 @@ export const createClass = async (req: Request, res: Response): Promise<void> =>
   }
 }
 
-export const addStudent = async(req:Request,res:Response):Promise<void>=>{
-
+export const addStudent = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   // const studentId = req.body.studentId;
   // const studentIdObj = new Types.ObjectId(req.body.studentId)
 
   // console.log(studentId);
   // console.log(studentIdObj);
 
-  const result =  addStudentSchema.safeParse(req.body);
+  const result = addStudentSchema.safeParse(req.body)
 
   // console.log(result);
-  if(!result.success){
+  if (!result.success) {
     // console.log(result);
-    res.status(400).json({success:true,error: 'Invalid request schema'})
+    res.status(400).json({ success: true, error: 'Invalid request schema' })
   }
 
-  const classId = req.params.id!;
+  const classId = req.params.id!
 
+  try {
+    const studentId = result.data?.studentId
 
-  try{
-    const studentId = result.data?.studentId;
-
-    const student = await User.findById(studentId);
-    if(!student){
+    const student = await User.findById(studentId)
+    if (!student) {
       res.status(404).json({
-        "success": false,
-        "error": "Student not found"
+        success: false,
+        error: 'Student not found',
       })
-      return;
+      return
     }
-    const ExistingClass = await ClassModel.findById(classId);
-    if(!ExistingClass){
+    const ExistingClass = await ClassModel.findById(classId)
+    if (!ExistingClass) {
       res.status(404).json({
-        "success": false,
-        "error": "Class not found"
+        success: false,
+        error: 'Class not found',
       })
-      return;
+      return
     }
-    
+
     // console.log
-    const studentIdObj = new Types.ObjectId(studentId);
+    const studentIdObj = new Types.ObjectId(studentId)
 
-    const data = await ClassModel.find({studentsIds: {$in:[studentIdObj]}})
+    const data = await ClassModel.find({ studentsIds: { $in: [studentIdObj] } })
 
-    if(data.length >0){
+    if (data.length > 0) {
       res.status(409).json({
-        success:false,
-        error:'student already exist in class'
+        success: false,
+        error: 'student already exist in class',
       })
-      return;
+      return
     }
-    ExistingClass.studentsIds.push(studentIdObj);
-    await ExistingClass.save();
-    res.status(201).json({success:true,ExistingClass})
-    return;
-
-  }catch(err:unknown){
-    if(err instanceof Error){
-
-      res.status(500).json({success:false,error:err.message});
+    ExistingClass.studentsIds.push(studentIdObj)
+    await ExistingClass.save()
+    res.status(201).json({ success: true, ExistingClass })
+    return
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      res.status(500).json({ success: false, error: err.message })
     }
   }
 }
 
-export const getclassdetails = async(req:Request,res:Response):Promise<void>=>{
-
-  const classId = req.params.id;
-  try{
+export const getclassdetails = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const classId = req.params.id
+  try {
     //teacher who own the class OR student enrolled in class
-    const ExistingClass = await ClassModel.findById(classId);
-    
+    const ExistingClass = await ClassModel.findById(classId)
 
-
-    if(!ExistingClass){
+    if (!ExistingClass) {
       res.status(404).json({
-        "success": false,
-        "error": "Class not found"
+        success: false,
+        error: 'Class not found',
       })
-      return;
+      return
     }
     // console.log(ExistingClass);
 
-    const userId = req.user.id;
+    const userId = req.user.id
     // console.log("userId: ",userId);
 
     const data = await ClassModel.find({
-      teacherId:userId
+      teacherId: userId,
     })
-    .populate("studentsIds",'name email -_id')
-    .populate("teacherId",'name email -_id')
-    .select({__v:0})
+      .populate('studentsIds', 'name email -_id')
+      .populate('teacherId', 'name email -_id')
+      .select({ __v: 0 })
 
     // console.log(checkUser);
-    if(data){
+    if (data) {
       // console.log("teacher: ",checkUser);
-      res.status(200).json({success:true,data});
-      return;
-    }
-    else{
-
+      res.status(200).json({ success: true, data })
+      return
+    } else {
       // const checkStudent = await ClassModel.find({studentIds:{$in:[userId]}})
 
       const data = await ClassModel.find({
-        _id:classId,
+        _id: classId,
         // teacherId:req.user.id,
-        studentsIds:{$in:[req.user.id]}
+        studentsIds: { $in: [req.user.id] },
       })
-      .populate("teacherId",'name email -_id')
-      .populate("studentsIds",'name email -_id')
-      .select({__v:0})
+        .populate('teacherId', 'name email -_id')
+        .populate('studentsIds', 'name email -_id')
+        .select({ __v: 0 })
 
       // console.log(checkStudent)
-      if(data.length ===0){
-        res.status(404).json({success:false,message:'you are not enrolled in the class'})
-        return;
+      if (data.length === 0) {
+        res
+          .status(404)
+          .json({
+            success: false,
+            message: 'you are not enrolled in the class',
+          })
+        return
       }
-      res.status(200).json({success:true,data});
-      return;
+      res.status(200).json({ success: true, data })
+      return
     }
-    
-
-  }catch(err:unknown){
-
-    if(err instanceof Error){
+  } catch (err: unknown) {
+    if (err instanceof Error) {
       res.status(500).json({
-        success:false,
-        error:err.message
+        success: false,
+        error: err.message,
       })
     }
   }
-    
 }
+export const getStudents = async(req:Request,res:Response):Promise<void>=>{
+
+  try{
+
+
+    const data = await User.find({
+      role:{$in:['student']}
+    })
+    .select({password:0,__v:0,createdAt:0,updatedAt:0})
+
+    if(data.length ===0){
+      res.status(404).json({success:false,error:"No students found"})
+      return;
+    }
+
+    res.status(200).json({success:true,data})
+    return;
+  }catch(err){
+
+    if(err instanceof Error){
+      res.status(500).json({success:false,error:err.message})
+    }
+    else{
+      res.status(500).json({success:false})
+      return;
+    }
+  }
+}
+

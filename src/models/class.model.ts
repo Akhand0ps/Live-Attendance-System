@@ -14,7 +14,7 @@ const ClassSchema = new Schema<IClass>(
       type: String,
       required: true,
       trim: true,
-      unique:true
+      unique: true,
     },
     teacherId: {
       type: Schema.Types.ObjectId,
@@ -23,7 +23,7 @@ const ClassSchema = new Schema<IClass>(
     },
     studentsIds: {
       type: [Schema.Types.ObjectId],
-      ref:'User',
+      ref: 'User',
       default: [],
     },
   },
