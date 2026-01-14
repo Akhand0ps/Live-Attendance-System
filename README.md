@@ -29,18 +29,23 @@ This project implements a complete backend system with:
 
 - **Class Management**
   - Create classes (Teacher only)
+  - Add students to classes
+  - View class details with enrolled students
+  - Get list of all students (Teacher only)
+
+- **Attendance System**
+  - Attendance model created
+  - Get student's attendance status
+  - Start attendance session endpoint
+  - In-memory session structure
 
 ### In Progress
 
-- Add students to classes
-- View class details with enrolled students
-- Get list of all students
 - Real-time Attendance (WebSocket)
-- Live attendance marking
+- Live attendance marking via WebSocket
 - Real-time updates broadcast to all clients
-- In-memory session management
-- Persistent storage to MongoDB
-- Attendance tracking features
+- Full WebSocket event implementation
+- Persistence of attendance to MongoDB on session end
 
 ## Tech Stack
 
@@ -49,7 +54,7 @@ This project implements a complete backend system with:
 - **Database**: MongoDB with Mongoose
 - **Authentication**: JWT (jsonwebtoken) - Token expires in 1 day
 - **Validation**: Zod schemas
-- **WebSocket**: ws library (to be implemented)
+- **WebSocket**: ws library v8.19.0
 - **Security**: bcrypt (10 salt rounds)
 - **Dev Tools**: nodemon, tsx, prettier
 
@@ -139,14 +144,16 @@ npm run format
 }
 ```
 
-### Attendance Model (To be implemented)
+### Attendance Model
 
 ```typescript
 {
   _id: ObjectId,
-  classId: ObjectId,     // ref: Class
+  classId: ObjectId,     // ref: ClassModel
   studentId: ObjectId,   // ref: User
-  status: "present" | "absent"
+  status: "present" | "absent",
+  createdAt: Date,
+  updatedAt: Date
 }
 ```
 
@@ -303,9 +310,9 @@ Authorization: Bearer <JWT_TOKEN>
 
 **Note**: Password field is excluded from the response.
 
-### Class Routes (`/api/v1`)
+### Class Routes (`/api/v1/class`)
 
-#### 4. POST `/api/v1/class`
+#### 4. POST `/api/v1/class/create-class`
 
 Create a new class (Teacher only).
 
@@ -353,15 +360,17 @@ Authorization: Bearer <JWT_TOKEN>
   "success": false,
   "error": "Forbidden, teacher access required"
 }
+
+// Class already exists (409)
+{
+  "success": false,
+  "error": "class already exist"
+}
 ```
-
----
-
-### Coming Soon - Additional Endpoints
 
 #### 5. POST `/api/v1/class/:id/add-student`
 
-Add a student to a class (Teacher only, must own class).
+Add a student to a class (Teacher only).
 
 **Request Body:**
 
@@ -371,49 +380,97 @@ Add a student to a class (Teacher only, must own class).
 }
 ```
 
-**Response (200):**
+**Success Response (201):**
 
 ```json
 {
   "success": true,
-  "data": {
+  "ExistingClass": {
     "_id": "675e9a1b1234567890fedcba",
     "className": "Math 101",
     "teacherId": "675e8f9a1234567890teacher",
-    "studentsIds": ["675e8f9a1234567890abcdef"]
+    "studentsIds": ["675e8f9a1234567890abcdef"],
+    "createdAt": "2026-01-15T10:00:00.000Z",
+    "updatedAt": "2026-01-15T10:30:00.000Z"
   }
+}
+```
+
+**Error Responses:**
+
+```json
+// Student not found (404)
+{
+  "success": false,
+  "error": "Student not found"
+}
+
+// Class not found (404)
+{
+  "success": false,
+  "error": "Class not found"
+}
+
+// Student already in class (409)
+{
+  "success": false,
+  "error": "student already exist in class"
 }
 ```
 
 #### 6. GET `/api/v1/class/:id`
 
-Get class details with enrolled students (Teacher who owns class OR enrolled student).
+Get class details with enrolled students (Teacher who owns class OR student enrolled in class).
 
-**Response (200):**
+**Success Response (200):**
 
 ```json
 {
   "success": true,
-  "data": {
-    "_id": "675e9a1b1234567890fedcba",
-    "className": "Math 101",
-    "teacherId": "675e8f9a1234567890teacher",
-    "students": [
-      {
-        "_id": "675e8f9a1234567890abcdef",
-        "name": "john doe",
-        "email": "john@example.com"
-      }
-    ]
-  }
+  "data": [
+    {
+      "_id": "675e9a1b1234567890fedcba",
+      "className": "Math 101",
+      "teacherId": {
+        "name": "teacher name",
+        "email": "teacher@test.com"
+      },
+      "studentsIds": [
+        {
+          "name": "john doe",
+          "email": "john@example.com"
+        }
+      ],
+      "createdAt": "2026-01-15T10:00:00.000Z",
+      "updatedAt": "2026-01-15T10:30:00.000Z"
+    }
+  ]
 }
 ```
 
-#### 7. GET `/api/v1/students`
+**Error Responses:**
+
+```json
+// Class not found (404)
+{
+  "success": false,
+  "error": "Class not found"
+}
+
+// Not enrolled (404)
+{
+  "success": false,
+  "message": "you are not enrolled in the class"
+}
+```
+
+**Note**: Response includes populated teacher and students data with name and email fields only.
+
+#### 7. GET `/api/v1/class/students`
 
 Get all students (Teacher only).
 
-**Response (200):**
+**Success Response (200):**
 
 ```json
 {
@@ -422,21 +479,33 @@ Get all students (Teacher only).
     {
       "_id": "675e8f9a1234567890abcdef",
       "name": "john doe",
-      "email": "john@example.com"
+      "email": "john@example.com",
+      "role": "student"
     }
   ]
 }
 ```
 
-### Attendance Routes (To be implemented)
+**Error Response:**
 
-#### 8. GET `/api/v1/class/:id/my-attendance`
+```json
+// No students found (404)
+{
+  "success": false,
+  "error": "No students found"
+}
+```
+
+### Attendance Routes (`/api/v1/attendance`)
+
+#### 8. GET `/api/v1/attendance/:id/my-attendance`
 
 Get student's attendance for a class (Student only, must be enrolled).
 
-**Response (200):**
+**Success Response (200):**
 
 ```json
+// When attendance is marked
 {
   "success": true,
   "data": {
@@ -444,31 +513,78 @@ Get student's attendance for a class (Student only, must be enrolled).
     "status": "present"
   }
 }
+
+// When not marked yet
+{
+  "success": true,
+  "data": {
+    "classId": "675e9a1b1234567890fedcba",
+    "status": null
+  }
+}
+```
+
+**Error Responses:**
+
+```json
+// Class not found (404)
+{
+  "success": false,
+  "error": "Class not found"
+}
+
+// Not enrolled (403)
+{
+  "success": false,
+  "error": "You are not in the class, please contact your professor/admin"
+}
 ```
 
 #### 9. POST `/api/v1/attendance/start`
 
-Start a new attendance session (Teacher only, must own class).
+Start a new attendance session (Teacher only).
 
 **Request Body:**
 
 ```json
 {
-  "classId": "675e9a1b1234567890fedcba"
+  "className": "Math 101"
 }
 ```
 
-**Response (200):**
+**Success Response (200):**
 
 ```json
 {
   "success": true,
   "data": {
-    "classId": "675e9a1b1234567890fedcba",
-    "startedAt": "2026-01-08T10:00:00.000Z"
+    "_id": "675e9a1b1234567890fedcba",
+    "className": "Math 101",
+    "teacherId": "675e8f9a1234567890teacher",
+    "studentsIds": ["675e8f9a1234567890abcdef"],
+    "createdAt": "2026-01-15T10:00:00.000Z",
+    "updatedAt": "2026-01-15T10:30:00.000Z"
   }
 }
 ```
+
+**Error Responses:**
+
+```json
+// Class not found (404)
+{
+  "success": false,
+  "error": "class not found"
+}
+
+// Validation Error (400)
+{
+  "success": false,
+  "error": "Invalid request schema"
+}
+```
+
+**Note**: This endpoint initializes an in-memory active session structure for WebSocket attendance tracking.
 
 ## WebSocket API (To be implemented)
 
@@ -670,14 +786,25 @@ ws://localhost:3000/ws?token=<JWT_TOKEN>
 Routes that require authentication middleware (`authenticate`):
 
 - `GET /api/v1/auth/me`
-- `POST /api/v1/class` (also requires teacher role)
+- `POST /api/v1/class/create-class` (also requires teacher role)
+- `POST /api/v1/class/:id/add-student` (also requires teacher role)
+- `GET /api/v1/class/:id`
+- `GET /api/v1/class/students` (also requires teacher role)
+- `GET /api/v1/attendance/:id/my-attendance` (also requires student role)
+- `POST /api/v1/attendance/start` (also requires teacher role)
 
 ### Role-Based Access
 
-Routes that require teacher role (`verifyRole` middleware):
+Routes that require **teacher role** (`verifyRole` middleware):
 
-- `POST /api/v1/class`
-- All attendance management endpoints (when implemented)
+- `POST /api/v1/class/create-class`
+- `POST /api/v1/class/:id/add-student`
+- `GET /api/v1/class/students`
+- `POST /api/v1/attendance/start`
+
+Routes that require **student role** (`OnlyUser` middleware):
+
+- `GET /api/v1/attendance/:id/my-attendance`
 
 ## In-Memory Session State (To be implemented)
 
@@ -742,9 +869,9 @@ const activeSession = {
 
 ## Planned Features & Flows
 
-### Attendance Session Flow (To be implemented)
+### Attendance Session Flow
 
-1. **Start Session**: Teacher calls `POST /api/v1/attendance/start` with classId
+1. **Start Session**: Teacher calls `POST /api/v1/attendance/start` with className (Implemented)
 2. **Mark Attendance**: Teacher sends `ATTENDANCE_MARKED` events via WebSocket
 3. **Real-time Updates**: All connected clients receive attendance updates
 4. **Check Status**: Students can query their status via `MY_ATTENDANCE` event
@@ -759,60 +886,69 @@ const activeSession = {
 
 **Teacher Permissions:**
 
-- Create classes (implemented)
-- Add students to classes (pending)
-- Start attendance sessions (pending)
-- Mark attendance (pending)
-- View all students (pending)
-- Access teacher-only routes (implemented)
+- Create classes ✓
+- Add students to classes ✓
+- Start attendance sessions ✓
+- View all students ✓
+- Mark attendance (WebSocket - in progress)
+- Access teacher-only routes ✓
 
 **Student Permissions:**
 
-- View enrolled classes (pending)
-- Check own attendance (pending)
-- Receive real-time attendance updates (pending)
+- View enrolled classes ✓
+- Check own attendance ✓
+- Receive real-time attendance updates (WebSocket - in progress)
 
 ## Project Structure
 
 ```
 Live-Attendance-System/
 ├── src/
-│   ├── index.ts                    # Entry point - server initialization
-│   ├── app.ts                      # Express app configuration
+│   ├── index.ts                        # Entry point - server initialization
+│   ├── app.ts                          # Express app configuration
 │   ├── config/
-│   │   └── db.config.ts           # MongoDB connection setup
+│   │   └── db.config.ts               # MongoDB connection setup
 │   ├── controller/
-│   │   ├── user.controller.ts     # Auth: register, login, me
-│   │   └── class.controller.ts    # Class: create class
+│   │   ├── user.controller.ts         # Auth: register, login, me
+│   │   ├── class.controller.ts        # Class CRUD operations
+│   │   ├── attendance.controller.ts   # Attendance management
+│   │   ├── activesession.controller.ts # In-memory session state
+│   │   └── ws.controller.ts           # WebSocket handler (in progress)
 │   ├── middleware/
-│   │   ├── auth.middleware.ts     # JWT verification
-│   │   └── auth.role.ts           # Teacher role check
+│   │   ├── auth.middleware.ts         # JWT verification
+│   │   └── auth.role.ts               # Role checks (teacher/student)
 │   ├── models/
-│   │   ├── user.model.ts          # User schema with timestamps
-│   │   └── class.model.ts         # Class schema with timestamps
+│   │   ├── user.model.ts              # User schema with timestamps
+│   │   ├── class.model.ts             # Class schema with timestamps
+│   │   └── attendance.model.ts        # Attendance schema
 │   ├── routes/
-│   │   ├── user.route.ts          # /api/v1/auth routes
-│   │   └── class.route.ts         # /api/v1/class routes
+│   │   ├── user.route.ts              # /api/v1/auth routes
+│   │   ├── class.route.ts             # /api/v1/class routes
+│   │   └── attendance.route.ts        # /api/v1/attendance routes
 │   ├── schemas/
-│   │   ├── auth.schema.ts         # Zod validation for auth
-│   │   └── class.schema.ts        # Zod validation for class
+│   │   ├── auth.schema.ts             # Zod validation for auth
+│   │   └── class.schema.ts            # Zod validation for class
 │   ├── types/
-│   │   └── express.d.ts           # Custom Express types
+│   │   └── express.d.ts               # Custom Express types
 │   └── utils/
-│       └── hash.pass.ts           # Bcrypt password hashing
-├── .env                            # Environment variables
-├── package.json                    # Dependencies & scripts
-├── tsconfig.json                   # TypeScript configuration
-└── README.md                       # This file
+│       └── hash.pass.ts               # Bcrypt password hashing
+├── .env                                # Environment variables
+├── package.json                        # Dependencies & scripts
+├── tsconfig.json                       # TypeScript configuration
+└── README.md                           # This file
 ```
 
 ### Key Files
 
 - **index.ts**: Starts server after DB connection
-- **app.ts**: Express middleware and route mounting
+- **app.ts**: Express middleware and route mounting (includes attendance routes)
 - **db.config.ts**: Async MongoDB connection with error handling
 - **auth.middleware.ts**: Extracts and verifies JWT, attaches `req.user`
-- **auth.role.ts**: Ensures user has teacher role
+- **auth.role.ts**: Role verification (`verifyRole` for teachers, `OnlyUser` for students)
+- **class.controller.ts**: Create class, add students, get class details, get all students
+- **attendance.controller.ts**: Get student attendance, start attendance session
+- **activesession.controller.ts**: Manages in-memory active session state
+- **attendance.model.ts**: Mongoose schema for attendance records
 - **express.d.ts**: TypeScript declarations for `req.user`
 
 ## Testing
@@ -841,11 +977,11 @@ Content-Type: application/json
 
 {
   "email": "teacher@test.com",
-  "password": "123456"
+  "password": "123456"/create-class
 }
 
 # 3. Create a class (use token from step 2)
-POST http://localhost:3000/api/v1/class
+POST http://localhost:3000/api/v1/class/create-class
 Authorization: Bearer YOUR_TOKEN_HERE
 Content-Type: application/json
 
@@ -942,29 +1078,34 @@ curl http://localhost:3000/api/v1/auth/me \
 
 **Completed:**
 
-- Authentication (register, login, me)
-- JWT middleware with role-based access
-- Create class endpoint
-- Password hashing with bcrypt
-- Zod validation schemas
+- Authentication (register, login, me) - All 3 endpoints
+- JWT middleware with role-based access (verifyRole for teacher, OnlyUser for student)
+- Create class endpoint with duplicate check
+- Add students to class with ObjectId validation
+- Get class details with populated teacher/students
+- Get all students endpoint (teacher only)
+- My attendance endpoint (student only)
+- Start attendance session endpoint (teacher only)
+- Attendance model with timestamps
+- Password hashing with bcrypt (10 rounds)
+- Zod validation schemas including ObjectId validation
 - MongoDB models with timestamps
+- In-memory active session structure
 
 **Pending:**
 
-- Add students to class
-- Get class details with populated students
-- Get all students (teacher only)
-- Attendance model
-- WebSocket implementation
-- Real-time attendance tracking
+- WebSocket server implementation
+- Real-time event handlers (ATTENDANCE_MARKED, TODAY_SUMMARY, MY_ATTENDANCE, DONE)
+- Attendance persistence on session end
+- Auto-marking absent students
 
 ### Next Steps
 
-1. Implement remaining class management endpoints
-2. Add Attendance model
-3. Implement WebSocket server
-4. Add attendance session management
-5. Implement real-time events (ATTENDANCE_MARKED, TODAY_SUMMARY, MY_ATTENDANCE, DONE)
+1. Complete WebSocket server setup with ws package
+2. Implement real-time event handlers
+3. Add attendance persistence logic
+4. Add auto-marking for absent students
+5. Test with provided test application
 
 ## Assignment Reference
 
