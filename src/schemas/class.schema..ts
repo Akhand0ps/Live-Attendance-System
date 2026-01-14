@@ -1,4 +1,11 @@
 import * as z from 'zod'
+import { Types } from 'mongoose'
+
+const ObjectIdSchema = z.string().refine((val)=>{
+  return Types.ObjectId.isValid(val);
+},{
+  message:'Invalid ObjectId'
+})
 
 export const classSchema = z.object({
   className: z.string().min(3),
@@ -7,5 +14,9 @@ export const classSchema = z.object({
 
 
 export const addStudentSchema = z.object({
-  studentId: z.string()
+  studentId: z.string().refine((val)=>{
+    return Types.ObjectId.isValid(val)
+  },{
+    message:'Invalid ObjectId'
+  })
 })

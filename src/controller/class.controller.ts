@@ -3,8 +3,6 @@ import { addStudentSchema, classSchema } from '../schemas/class.schema.'
 import { User } from '../models/user.model'
 import { ClassModel } from '../models/class.model'
 import { Types } from 'mongoose'
-import da from 'zod/v4/locales/da.js'
-import { success } from 'zod'
 
 export const createClass = async (req: Request, res: Response): Promise<void> => {
   const result = classSchema.safeParse(req.body)
@@ -37,7 +35,7 @@ export const createClass = async (req: Request, res: Response): Promise<void> =>
 
     await data.save()
 
-    console.log('Data: ', data)
+    // console.log('Data: ', data)
 
     res.status(201).json({ success: true, data })
     return
@@ -53,11 +51,17 @@ export const createClass = async (req: Request, res: Response): Promise<void> =>
 
 export const addStudent = async(req:Request,res:Response):Promise<void>=>{
 
+  // const studentId = req.body.studentId;
+  // const studentIdObj = new Types.ObjectId(req.body.studentId)
+
+  // console.log(studentId);
+  // console.log(studentIdObj);
 
   const result =  addStudentSchema.safeParse(req.body);
 
   // console.log(result);
   if(!result.success){
+    // console.log(result);
     res.status(400).json({success:true,error: 'Invalid request schema'})
   }
 
@@ -115,6 +119,8 @@ export const getclassdetails = async(req:Request,res:Response):Promise<void>=>{
   try{
     //teacher who own the class OR student enrolled in class
     const ExistingClass = await ClassModel.findById(classId);
+    
+
 
     if(!ExistingClass){
       res.status(404).json({
@@ -128,20 +134,40 @@ export const getclassdetails = async(req:Request,res:Response):Promise<void>=>{
     const userId = req.user.id;
     // console.log("userId: ",userId);
 
-    const checkUser = await ClassModel.findOne({teacherId:userId}).populate("studentsIds");
+    const data = await ClassModel.find({
+      teacherId:userId
+    })
+    .populate("studentsIds",'name email -_id')
+    .populate("teacherId",'name email -_id')
+    .select({__v:0})
 
     // console.log(checkUser);
-    if(checkUser){
-      console.log("teacher: ",checkUser);
-      res.status(200).json({success:true,checkUser});
+    if(data){
+      // console.log("teacher: ",checkUser);
+      res.status(200).json({success:true,data});
       return;
     }
     else{
 
-      
+      // const checkStudent = await ClassModel.find({studentIds:{$in:[userId]}})
+
+      const data = await ClassModel.find({
+        _id:classId,
+        // teacherId:req.user.id,
+        studentsIds:{$in:[req.user.id]}
+      })
+      .populate("teacherId",'name email -_id')
+      .populate("studentsIds",'name email -_id')
+      .select({__v:0})
+
+      // console.log(checkStudent)
+      if(data.length ===0){
+        res.status(404).json({success:false,message:'you are not enrolled in the class'})
+        return;
+      }
+      res.status(200).json({success:true,data});
+      return;
     }
-    res.status(200).json({success:true});
-    return;
     
 
   }catch(err:unknown){

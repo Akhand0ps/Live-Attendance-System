@@ -23,7 +23,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     const hashedPass = await hashPass(password)
-    console.log(hashedPass)
+    // console.log(hashedPass)
 
     // password = hashedPass;
 
@@ -39,12 +39,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         console.log('successfully saved')
       })
       .catch((err) => {
-        throw new Error('Erro came in saving user info')
-        console.log('err: ', err)
+        throw new Error('Erro came in saving user info',err)
       })
 
-    console.log(data)
-    res.status(201).json({ success: true, data })
+    // console.log(data)
+    res.status(201).json({ success: true,message:'Account created Successfully'})
     return
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: 'Internal Server Error' })
@@ -81,7 +80,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       process.env.JWT_SECRET!,
       { expiresIn: '1d' },
     )
-    console.log('token: ', token)
+    // console.log('token: ', token)
 
     const data = { token }
     res.status(200).json({
@@ -101,7 +100,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 export const me = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user.id
-    console.log(userId)
+    // console.log(userId)
     const data = await User.findById(userId).select('-password')
     if (!data) {
       res.status(404).json({ success: false, error: 'User not found' })
