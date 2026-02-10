@@ -9,6 +9,7 @@ interface IAttendance{
     classId:ObjectId,
     studentId:ObjectId,
     status: statusType
+    className:string
 }
 
 
@@ -17,6 +18,11 @@ const AttendanceSchema = new Schema<IAttendance>({
         type:Schema.Types.ObjectId,
         ref:"ClassModel",
         required:true
+    },
+    className:{
+        type:String,
+        required:true,
+        unique:true
     },
     studentId:{
         type:Schema.Types.ObjectId,

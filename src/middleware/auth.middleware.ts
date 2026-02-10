@@ -37,6 +37,7 @@ export const authenticate = async (
       role: verifytoken.role,
     }
 
+
     next()
   } catch (err: unknown) {
     if (err instanceof Error) {

@@ -3,9 +3,9 @@ import { ClassModel } from "../models/class.model";
 import { User } from "../models/user.model";
 import { Attendance } from "../models/attendance.model";
 import { classSchema } from "../schemas/class.schema.";
-import da from "zod/v4/locales/da.js";
-import { success } from "zod";
+import { AttendanceSession } from "../models/attendance.session.model";
 
+let activeSession:{classId:string,startedAt:Date,attendance:Record<string,string>} | null =null
 
 
 
@@ -106,21 +106,35 @@ export const attendanceStart = async(req:Request,res:Response):Promise<void>=>{
         return;
     }
 
-    const activeSession = {
-        classId:data._id,
-        startedAt: new Date().toISOString(),
-        attendance:{
+    const checkSession = await AttendanceSession.findOne({
+      className:result.data.className
+    })
 
-        }
+    if(checkSession?.is_active){
+      res.status(409).json({
+        success:false,
+        message:'One Session is already active'
+      })
+      return;
     }
-
-    //yaha pe ws connect kr aur sesson start kr
-
     
 
+
+
+     activeSession = {
+        classId:data._id.toString(),
+        startedAt: new Date(),
+        attendance:{}
+    }
+
+    
+    //yaha pe ws connect kr aur sesson start kr
     res.status(200).json({
       success:true,
-      data
+      data:{
+        "classId":data._id,
+        "startedAt":new Date().toISOString()
+      }
     })
     return;
 
@@ -135,3 +149,4 @@ export const attendanceStart = async(req:Request,res:Response):Promise<void>=>{
     }
   }
 }
+
